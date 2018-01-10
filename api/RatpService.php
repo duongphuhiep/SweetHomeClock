@@ -1,6 +1,6 @@
 <?php
 define('RATP_WS', 'http://opendata-tr.ratp.fr/wsiv/services/Wsiv');
-require_once __DIR__ . '/ratpsdk/vendor/autoload.php';
+require_once '../ratpsdk/vendor/autoload.php';
 
 class RatpService
 {
@@ -47,7 +47,7 @@ class RatpService
         return $resp;
     }
 
-    function getNextTrain2(\StructType\Station $station, String $sens = '*')
+    function getMissionsNext2(\StructType\Station $station, String $sens = '*')
     {
         $direction = (new \StructType\Direction())
             ->setSens($sens);
@@ -68,7 +68,7 @@ class RatpService
      * @return bool|\StructType\GetMissionsNextResponse
      * @throws Exception
      */
-    function getNextTrain(String $line, String $stationName, String $sens = '*')
+    function getMissionsNext(String $line, String $stationName, String $sens = '*')
     {
         $station = (new \StructType\Station())
             ->setName($stationName)
@@ -86,8 +86,4 @@ class RatpService
         }
         return $resp;
     }
-}
-
-if ($_GET["name"]=='getNextTrain') {
-
 }

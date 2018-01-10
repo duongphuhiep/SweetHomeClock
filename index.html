@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	<script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <title>Sweet Home Clock</title>
+</head>
+<body>
+	<div id='app'>
+		<clock></clock>
+	</div>
+
+	<script type="text/x-template" id="clock">
+		<p>clock clock</p>
+	</script>
+
+
+	<script>
+
+        Vue.component('clock', {
+            template: '#clock'}
+        );
+
+        new Vue({
+            el:'#app'
+        });
+
+        axios.get('./api/getMissionsNext')
+            .then(function (response) {
+                console.info(response);
+            })
+            .catch(function (error) {
+                console.error(error);
+            });
+	</script>
+
+
+</body>
+</html>
