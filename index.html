@@ -5,37 +5,102 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" />
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 	<script src="https://unpkg.com/vue/dist/vue.js"></script>
     <title>Sweet Home Clock</title>
 </head>
 <body>
+	<!-- clock start -->
+	<script type="text/x-template" id="clock">
+		<missionList></missionList>
+	</script>
+	<script>
+        Vue.component('clock', {
+            template: '#clock',
+        });
+	</script>
+	<!-- clock end -->
+
+
+	<!-- mission start-->
+	<script type="text/x-template" id="mission">
+		<tr>
+			<td>{{m.stations[1].name}}</td>
+			<td>{{m.stationsMessages[0]}}</td>
+			<td>{{timeToWait}}</td>
+		</tr>
+	</script>
+	<script>
+        Vue.component('mission', {
+            template: '#mission',
+            props: ['m'],
+			computed: {
+                timeToWait() {
+                    if (!this.m.stationsStops[0]) return "";
+                    let strArriveAt = this.m.stationsDates[0]
+                    let y = strArriveAt.substr(0,4),
+                        mo = strArriveAt.substr(4,2) - 1,
+                        d = strArriveAt.substr(6,2),
+                    	h = strArriveAt.substr(8,2),
+                    	mi = strArriveAt.substr(10,2);
+                    let arriveAt = new Date(y,mo,d,h,mi);
+                    //if the date is valid
+                    if (arriveAt.getFullYear() == y && arriveAt.getMonth() == mo && arriveAt.getDate() == d
+						&& arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
+					{
+					    let now = new Date();
+						return Math.floor((arriveAt.getTime() - now.getTime()) / 60000);
+					}
+         			return 'invalid date '+strArriveAt;
+				}
+			}
+        });
+	</script>
+	<!-- mission end-->
+
+	<!-- missionList start-->
+	<script type="text/x-template" id="missionList">
+		<div>
+
+			<table border="1">
+				<tr>Aller</tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>
+				<tr>Retour</tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>
+			</table>
+		</div>
+	</script>
+	<script>
+        Vue.component('missionList', {
+            template: '#missionList',
+            data() {
+                return MISSON_NEXT_SAMPLE.return;
+            }
+
+        });
+	</script>
+	<!-- missionList end-->
+
+
+	<script src="mission_next_sample.js"></script>
+
 	<div id='app'>
 		<clock></clock>
 	</div>
-
-	<script type="text/x-template" id="clock">
-		<p>clock clock</p>
-	</script>
-
-
 	<script>
-
-        Vue.component('clock', {
-            template: '#clock'}
-        );
-
         new Vue({
             el:'#app'
         });
 
-        axios.get('./api/getMissionsNext')
-            .then(function (response) {
-                console.info(response);
-            })
-            .catch(function (error) {
-                console.error(error);
-            });
+        // axios.get('./api/getMissionsNext')
+        //     .then(function (response) {
+        //         //response.data.return.mission
+        //         console.info(response);
+        //     })
+        //     .catch(function (error) {
+        //         console.error(error);
+        //     });
 	</script>
 
 
