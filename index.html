@@ -8,20 +8,65 @@
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css" />
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 	<script src="https://unpkg.com/vue/dist/vue.js"></script>
+	<script src="util.js"></script>
     <title>Sweet Home Clock</title>
 </head>
 <body>
-	<!-- clock start -->
+	<script>
+		setInterval(()=>EventBus.$emit('SEC', new Date()), 1000);
+	</script>
+
+
+	<!-- clock start-->
 	<script type="text/x-template" id="clock">
-		<missionList></missionList>
+		<div>
+			<div>
+				{{date}} {{time}}
+			</div>
+
+		</div>
 	</script>
 	<script>
         Vue.component('clock', {
             template: '#clock',
+            data(){
+                return { now: new Date() };
+            },
+			computed: {
+                date: {
+                    get() {
+                        var month = '' + (this.now.getMonth() + 1);
+                        var day = '' + this.now.getDate();
+                        var year = this.now.getFullYear();
+
+                        if (month.length < 2) month = '0' + month;
+                        if (day.length < 2) day = '0' + day;
+
+                        return [year, month, day].join('-');
+                    }
+				},
+				time: {
+                    get() {
+                        var h = '' + this.now.getHours();
+                        var m = '' + this.now.getMinutes();
+                        var s = '' + this.now.getSeconds();
+
+                        if (h.length < 2) h = '0' + h;
+                        if (m.length < 2) m = '0' + m;
+                        if (s.length < 2) s = '0' + s;
+
+                        return [h, m, s].join(':');
+                    }
+				}
+			},
+            mounted() {
+                EventBus.$on("SEC", (now)=>{
+                    this.now = now;
+                })
+            }
         });
 	</script>
-	<!-- clock end -->
-
+	<!-- clock end-->
 
 	<!-- mission start-->
 	<script type="text/x-template" id="mission">
@@ -35,6 +80,9 @@
         Vue.component('mission', {
             template: '#mission',
             props: ['m'],
+			data(){
+				return { now: new Date() };
+			},
 			computed: {
                 timeToWait() {
                     if (!this.m.stationsStops[0]) return "";
@@ -49,11 +97,15 @@
                     if (arriveAt.getFullYear() == y && arriveAt.getMonth() == mo && arriveAt.getDate() == d
 						&& arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
 					{
-					    let now = new Date();
-						return Math.floor((arriveAt.getTime() - now.getTime()) / 60000);
+						return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
 					}
-         			return 'invalid date '+strArriveAt;
+         																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																															return 'invalid date '+strArriveAt;
 				}
+			},
+			mounted() {
+                EventBus.$on("SEC", (now)=>{
+                    this.now = now;
+				})
 			}
         });
 	</script>
@@ -62,12 +114,11 @@
 	<!-- missionList start-->
 	<script type="text/x-template" id="missionList">
 		<div>
-
 			<table border="1">
 				<tr>Aller</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
 				<tr>Retour</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>
 			</table>
 		</div>
 	</script>
@@ -82,11 +133,25 @@
 	</script>
 	<!-- missionList end-->
 
+	<!-- root start -->
+	<script type="text/x-template" id="root">
+		<div>
+			<clock></clock>
+			<missionList></missionList>
+		</div>
+	</script>
+	<script>
+        Vue.component('root', {
+            template: '#root',
+        });
+	</script>
+	<!-- root end -->
+
 
 	<script src="mission_next_sample.js"></script>
 
 	<div id='app'>
-		<clock></clock>
+		<root></root>
 	</div>
 	<script>
         new Vue({
