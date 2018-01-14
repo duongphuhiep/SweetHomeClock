@@ -14,21 +14,18 @@
 <body>
 	<script>
 		setInterval(()=>EventBus.$emit('SEC', new Date()), 1000);
-		//let missionNextUpdater = new MissionNextUpdater();
 	</script>
 
     <!-- updater start-->
     <script type="text/x-template" id="updater">
         <div>
             <div>
-				<div v-if="lastSuccessUpdate != null">data updated since:{{lastSuccessUpdateStr}}</div>
+				<div v-if="lastSuccessUpdate != null">data updated since {{lastSuccessUpdateStr}}</div>
 
 				<div v-if="isUpdating">updating...</div>
 				<div v-else>
-					past update tentative: {{lastUpdateStr}}<br/>
-					next update tentative: {{nextUpdateStr}} in ({{nextUpdateInSec}} sec)
+					next update in ({{nextUpdateInSec}} sec)
 				</div>
-
 				<div v-if="lastError!=null">
                 	{{JSON.stringify(lastError)}}
 				</div>
@@ -52,24 +49,14 @@
 			computed: {
                 lastSuccessUpdateStr: {
                     get() {
-                        return Tools.timeToString(this.lastSuccessUpdate);
+                        return Tools.dateTimeToSinceString(this.lastSuccessUpdate, this.now);
 					}
 				},
-                lastUpdateStr: {
-                    get() {
-                        return Tools.timeToString(this.lastUpdate);
-                    }
-                },
-                nextUpdateStr: {
-                    get() {
-                        return Tools.timeToString(this.nextUpdate);
-                    }
-                },
                 nextUpdateInSec: {
                     get() {
                         if (this.nextUpdate === null || this.now===null)
                             return "-";
-                        return Math.floor((this.nextUpdate.getTime() - this.now.getTime()) / 3600);
+                        return Math.round((this.nextUpdate.getTime() - this.now.getTime()) / 1000);
 					}
 				}
 			},
@@ -86,10 +73,9 @@
                     this.lastUpdate = now;
                     let $this = this;
 
+                    let nextUpdateInSec = 300; //5min
                     axios.get('./api/getMissionsNext')
                         .then(function (response) {
-                            let nextUpdateInSec = 300 //5min
-
                             try {
                                 $this.lastError = null;
                                 let data = response.data.return;
@@ -125,7 +111,9 @@
                                     throw "Unable to find nearest future mission (now = " + now.toString() + ")";
                                 }
 
-                                let timeToWaitInSecond = Math.floor((nearestDateInFuture.getTime() - now.getTime()) / 3600);
+                                let timeToWaitInSecond = Math.floor((nearestDateInFuture.getTime() - now.getTime()) / 1000);
+
+
                                 if (timeToWaitInSecond < 0) {
                                     nextUpdateInSec = 60 //1min
                                     throw "unexpected situation nearestDateInFuture (was in the past) = " + nearestDateInFuture.toString() + "; now = " + now.toString()
@@ -141,6 +129,8 @@
                                     nextUpdateInSec = 900; //update after 15min at least
                                 }
 
+                                //console.log("nearestDateInFuture="+Tools.timeToString(nearestDateInFuture) + " - now=" + Tools.timeToString(now)+" = "+timeToWaitInSecond+"s - nextUpdateInSec="+nextUpdateInSec+"s");
+
                                 $this.lastError = null;
                                 $this.lastData = data;
                                 $this.lastSuccessUpdate = now;
@@ -153,20 +143,17 @@
 
                                 console.error(e, response);
                             }
-                            finally {
-                                let nextUpdate = now;
-                                nextUpdate.setSeconds(nextUpdate.getSeconds() + nextUpdateInSec);
-                                $this.nextUpdate = nextUpdate;
-                            }
                         })
                         .catch(function (error) {
                             $this.lastError = error;
                             console.error(error);
-                            let nextUpdate = now;
-                            nextUpdate.setSeconds(now.getSeconds() + nextUpdateInSec);
-                            $this.nextUpdate = nextUpdate;
                         })
                         .finally(() => {
+                            let nextUpdate = new Date(now);
+                            nextUpdate.setSeconds(nextUpdate.getSeconds() + nextUpdateInSec);
+
+                            $this.nextUpdate = nextUpdate;
+                            console.log(Tools.timeToString(nextUpdate));
                             $this.isUpdating = false;
                             EventBus.$emit("MISSION_UPDATE", $this);
                         });
@@ -262,11 +249,11 @@
 		<div>
 			<table border="1">
 				<tr>Aller</tr>
-				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>-->
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
+				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>-->
 				<tr>Retour</tr>
-				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>-->
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>
+				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>-->
 			</table>
 		</div>
 	</script>
