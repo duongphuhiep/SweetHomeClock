@@ -14,8 +14,167 @@
 <body>
 	<script>
 		setInterval(()=>EventBus.$emit('SEC', new Date()), 1000);
+		//let missionNextUpdater = new MissionNextUpdater();
 	</script>
 
+    <!-- updater start-->
+    <script type="text/x-template" id="updater">
+        <div>
+            <div>
+				<div v-if="lastSuccessUpdate != null">data updated since:{{lastSuccessUpdateStr}}</div>
+
+				<div v-if="isUpdating">updating...</div>
+				<div v-else>
+					past update tentative: {{lastUpdateStr}}<br/>
+					next update tentative: {{nextUpdateStr}} in ({{nextUpdateInSec}} sec)
+				</div>
+
+				<div v-if="lastError!=null">
+                	{{JSON.stringify(lastError)}}
+				</div>
+            </div>
+        </div>
+    </script>
+    <script>
+        Vue.component('updater', {
+            template: '#updater',
+            data(){
+                return {
+                    lastData: null,
+					lastError: null,
+                    lastUpdate:null,
+					nextUpdate: null,
+					isUpdating: false,
+                    lastSuccessUpdate: null,
+					now: new Date()
+                };
+            },
+			computed: {
+                lastSuccessUpdateStr: {
+                    get() {
+                        return Tools.timeToString(this.lastSuccessUpdate);
+					}
+				},
+                lastUpdateStr: {
+                    get() {
+                        return Tools.timeToString(this.lastUpdate);
+                    }
+                },
+                nextUpdateStr: {
+                    get() {
+                        return Tools.timeToString(this.nextUpdate);
+                    }
+                },
+                nextUpdateInSec: {
+                    get() {
+                        if (this.nextUpdate === null || this.now===null)
+                            return "-";
+                        return Math.floor((this.nextUpdate.getTime() - this.now.getTime()) / 3600);
+					}
+				}
+			},
+            mounted() {
+                EventBus.$on("SEC", this.ticktoc);
+            },
+			methods: {
+                ticktoc(now) {
+                    this.now = now;
+                    if (this.isUpdating || now < this.nextUpdate) {
+                        return;
+                    }
+                    this.isUpdating = true;
+                    this.lastUpdate = now;
+                    let $this = this;
+
+                    axios.get('./api/getMissionsNext')
+                        .then(function (response) {
+                            let nextUpdateInSec = 300 //5min
+
+                            try {
+                                $this.lastError = null;
+                                let data = response.data.return;
+
+                                //check if response is validate
+
+                                if (typeof data === 'undefined' || typeof data.missions === 'undefined') {
+                                    nextUpdateInSec = 150; //2.5min
+                                    throw "Invalid response";
+                                }
+
+                                let missions = data.missions;
+                                if (missions === null || !(missions && missions.length)) {
+                                    nextUpdateInSec = 150; //2.5min
+                                    throw "Empty next mission";
+                                }
+
+                                //compute the next update
+
+                                //find the nearest next (future) mission
+                                let nearestDateInFuture = new Date(Math.min.apply(null, missions.map(function (m) {
+                                    let missionDateTimeStr = m.stationsDates[0];
+                                    if (typeof missionDateTimeStr === 'undefined' || missionDateTimeStr === null) {
+                                        return MAXDATE;
+                                    }
+                                    let missionDateTime = Tools.toDate(missionDateTimeStr)
+                                    if (missionDateTime < now) return MAXDATE;
+                                    return missionDateTime;
+                                })));
+
+                                if (nearestDateInFuture == MAXDATE) {
+                                    nextUpdateInSec = 300; //5min
+                                    throw "Unable to find nearest future mission (now = " + now.toString() + ")";
+                                }
+
+                                let timeToWaitInSecond = Math.floor((nearestDateInFuture.getTime() - now.getTime()) / 3600);
+                                if (timeToWaitInSecond < 0) {
+                                    nextUpdateInSec = 60 //1min
+                                    throw "unexpected situation nearestDateInFuture (was in the past) = " + nearestDateInFuture.toString() + "; now = " + now.toString()
+                                }
+
+                                nextUpdateInSec = timeToWaitInSecond / 2;
+
+                                if (timeToWaitInSecond < 3) {
+                                    nextUpdateInSec = 3; //update after 3s at most
+                                }
+
+                                if (timeToWaitInSecond > 1800) {
+                                    nextUpdateInSec = 900; //update after 15min at least
+                                }
+
+                                $this.lastError = null;
+                                $this.lastData = data;
+                                $this.lastSuccessUpdate = now;
+                            }
+                            catch (e) {
+                                $this.lastError = {
+                                    message: e,
+                                    response
+                                };
+
+                                console.error(e, response);
+                            }
+                            finally {
+                                let nextUpdate = now;
+                                nextUpdate.setSeconds(nextUpdate.getSeconds() + nextUpdateInSec);
+                                $this.nextUpdate = nextUpdate;
+                            }
+                        })
+                        .catch(function (error) {
+                            $this.lastError = error;
+                            console.error(error);
+                            let nextUpdate = now;
+                            nextUpdate.setSeconds(now.getSeconds() + nextUpdateInSec);
+                            $this.nextUpdate = nextUpdate;
+                        })
+                        .finally(() => {
+                            $this.isUpdating = false;
+                            EventBus.$emit("MISSION_UPDATE", $this);
+                        });
+                }
+            }
+        });
+    </script>
+    <!-- updater end-->
 
 	<!-- clock start-->
 	<script type="text/x-template" id="clock">
@@ -35,33 +194,19 @@
 			computed: {
                 date: {
                     get() {
-                        var month = '' + (this.now.getMonth() + 1);
-                        var day = '' + this.now.getDate();
-                        var year = this.now.getFullYear();
-
-                        if (month.length < 2) month = '0' + month;
-                        if (day.length < 2) day = '0' + day;
-
-                        return [year, month, day].join('-');
+                        return Tools.dateToString(this.now);
                     }
 				},
 				time: {
                     get() {
-                        var h = '' + this.now.getHours();
-                        var m = '' + this.now.getMinutes();
-                        var s = '' + this.now.getSeconds();
-
-                        if (h.length < 2) h = '0' + h;
-                        if (m.length < 2) m = '0' + m;
-                        if (s.length < 2) s = '0' + s;
-
-                        return [h, m, s].join(':');
+                        return Tools.timeToString(this.now);
                     }
 				}
 			},
             mounted() {
+                let $this = this;
                 EventBus.$on("SEC", (now)=>{
-                    this.now = now;
+                    $this.now = now;
                 })
             }
         });
@@ -73,7 +218,7 @@
 		<tr>
 			<td>{{m.stations[1].name}}</td>
 			<td>{{m.stationsMessages[0]}}</td>
-			<td>{{timeToWait}}</td>
+			<td>{{timeToWaitInMinute}}</td>
 		</tr>
 	</script>
 	<script>
@@ -84,27 +229,28 @@
 				return { now: new Date() };
 			},
 			computed: {
-                timeToWait() {
-                    if (!this.m.stationsStops[0]) return "";
+                timeToWaitInMinute() {
+                    //if (!this.m.stationsStops[0]) return "";
                     let strArriveAt = this.m.stationsDates[0]
                     let y = strArriveAt.substr(0,4),
                         mo = strArriveAt.substr(4,2) - 1,
                         d = strArriveAt.substr(6,2),
-                    	h = strArriveAt.substr(8,2),
-                    	mi = strArriveAt.substr(10,2);
-                    let arriveAt = new Date(y,mo,d,h,mi);
+                        h = strArriveAt.substr(8,2),
+                        mi = strArriveAt.substr(10,2);
+                    let arriveAt = new Date(y,mo,d,h,mi, 0);
                     //if the date is valid
                     if (arriveAt.getFullYear() == y && arriveAt.getMonth() == mo && arriveAt.getDate() == d
-						&& arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
-					{
-						return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
-					}
-         																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																															return 'invalid date '+strArriveAt;
+                        && arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
+                    {
+                        //return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
+                        return Math.floor((arriveAt.getTime() - this.now.getTime()) / 3600);
+                    }
 				}
 			},
 			mounted() {
+                let $this = this;
                 EventBus.$on("SEC", (now)=>{
-                    this.now = now;
+                    $this.now = now;
 				})
 			}
         });
@@ -116,9 +262,11 @@
 		<div>
 			<table border="1">
 				<tr>Aller</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
+				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>-->
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>
 				<tr>Retour</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>
+				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>-->
+				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>
 			</table>
 		</div>
 	</script>
@@ -126,8 +274,15 @@
         Vue.component('missionList', {
             template: '#missionList',
             data() {
-                return MISSON_NEXT_SAMPLE.return;
-            }
+                return {missions: null};
+            },
+			mounted() {
+                let $this=this;
+                EventBus.$on("MISSION_UPDATE", (updater)=>{
+                    if (updater.lastData!==null)
+                    	$this.missions = updater.lastData.missions;
+                })
+			}
 
         });
 	</script>
@@ -138,6 +293,7 @@
 		<div>
 			<clock></clock>
 			<missionList></missionList>
+			<updater></updater>
 		</div>
 	</script>
 	<script>
@@ -157,15 +313,6 @@
         new Vue({
             el:'#app'
         });
-
-        // axios.get('./api/getMissionsNext')
-        //     .then(function (response) {
-        //         //response.data.return.mission
-        //         console.info(response);
-        //     })
-        //     .catch(function (error) {
-        //         console.error(error);
-        //     });
 	</script>
 
 
