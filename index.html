@@ -24,7 +24,7 @@
 
 				<div v-if="isUpdating">updating...</div>
 				<div v-else>
-					next update in {{nextUpdateInSec}} sec
+					next update in {{nextUpdateInSec}}
 				</div>
 				<div v-if="lastError!=null">
                 	{{JSON.stringify(lastError)}}
@@ -80,7 +80,7 @@
 
                                 //check if response is validate
 
-                                if (typeof data === 'undefined' || typeof data.missions === 'undefined') {
+                                if (Tools.isUndefinedOrNull(data) || Tools.isUndefinedOrNull(data.missions)) {
                                     nextUpdateInSec = 150; //2.5min
                                     throw "Invalid response";
                                 }
@@ -94,41 +94,62 @@
                                 //compute the next update
 
                                 //find the nearest next (future) mission
-                                let nearestDateInFuture = new Date(Math.min.apply(null, missions.map(function (m) {
+                                let nearestDateInFuture = MAXDATE;
+                                let hasOutDateMission = false;
+                                let m;
+                                for (m of missions) {
                                     let missionDateTimeStr = m.stationsDates[0];
-                                    if (typeof missionDateTimeStr === 'undefined' || missionDateTimeStr === null) {
-                                        return MAXDATE;
+                                    if (!Tools.isUndefinedOrNull(missionDateTimeStr)) {
+                                        let missionDateTime = Tools.toDate(missionDateTimeStr);
+                                        if (missionDateTime > now) {
+                                            if (nearestDateInFuture>missionDateTime) {
+                                                nearestDateInFuture = missionDateTime;
+                                            }
+                                        }
+                                        else {
+                                            hasOutDateMission = true;
+                                        }
                                     }
-                                    let missionDateTime = Tools.toDate(missionDateTimeStr)
-                                    if (missionDateTime < now) return MAXDATE;
-                                    return missionDateTime;
-                                })));
-
-                                if (nearestDateInFuture == MAXDATE) {
-                                    nextUpdateInSec = 300; //5min
-                                    throw "Unable to find nearest future mission (now = " + now.toString() + ")";
                                 }
+                                // let nearestDateInFuture = new Date(Math.min.apply(null, missions.map(function (m) {
+                                //     let missionDateTimeStr = m.stationsDates[0];
+                                //     if (Tools.isUndefinedOrNull(missionDateTimeStr)) {
+                                //         return MAXDATE;
+                                //     }
+                                //     let missionDateTime = Tools.toDate(missionDateTimeStr)
+                                //     if (missionDateTime < now) return MAXDATE;
+                                //     return missionDateTime;
+                                // })));
 
-                                let timeToWaitInSecond = Math.floor((nearestDateInFuture.getTime() - now.getTime()) / 1000);
-
-
-                                if (timeToWaitInSecond < 0) {
-                                    nextUpdateInSec = 60 //1min
-                                    throw "unexpected situation nearestDateInFuture (was in the past) = " + nearestDateInFuture.toString() + "; now = " + now.toString()
+                                if (hasOutDateMission) {
+                                    nextUpdateInSec = 5;
                                 }
+                                else {
+                                    if (nearestDateInFuture == MAXDATE) {
+                                        nextUpdateInSec = 300; //5min
+                                        throw "Unable to find nearest future mission (now = " + now.toString() + ")";
+                                    }
 
-                                nextUpdateInSec = timeToWaitInSecond / 2;
+                                    let timeToWaitInSecond = Math.floor((nearestDateInFuture.getTime() - now.getTime()) / 1000);
 
-                                if (timeToWaitInSecond < 3) {
-                                    nextUpdateInSec = 3; //update after 3s at most
+
+                                    if (timeToWaitInSecond < 0) {
+                                        nextUpdateInSec = 60 //1min
+                                        throw "unexpected situation nearestDateInFuture (was in the past) = " + nearestDateInFuture.toString() + "; now = " + now.toString()
+                                    }
+
+                                    nextUpdateInSec = timeToWaitInSecond / 2;
+
+                                    if (timeToWaitInSecond < 3) {
+                                        nextUpdateInSec = 3; //update after 3s at most
+                                    }
+
+                                    if (timeToWaitInSecond > 1800) {
+                                        nextUpdateInSec = 900; //update after 15min at least
+                                    }
+
+                                    //console.log("nearestDateInFuture="+Tools.timeToString(nearestDateInFuture) + " - now=" + Tools.timeToString(now)+" = "+timeToWaitInSecond+"s - nextUpdateInSec="+nextUpdateInSec+"s");
                                 }
-
-                                if (timeToWaitInSecond > 1800) {
-                                    nextUpdateInSec = 900; //update after 15min at least
-                                }
-
-                                //console.log("nearestDateInFuture="+Tools.timeToString(nearestDateInFuture) + " - now=" + Tools.timeToString(now)+" = "+timeToWaitInSecond+"s - nextUpdateInSec="+nextUpdateInSec+"s");
-
                                 $this.lastError = null;
                                 $this.lastData = data;
                                 $this.lastSuccessUpdate = now;
@@ -225,7 +246,6 @@
                     if (arriveAt.getFullYear() == y && arriveAt.getMonth() == mo && arriveAt.getDate() == d
                         && arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
                     {
-                        //return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
                         return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
                     }
 				}
