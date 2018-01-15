@@ -157,6 +157,7 @@
                                 $this.lastSuccessUpdate = now;
                             }
                             catch (e) {
+                                nextUpdateInSec = 10;
                                 $this.lastError = {
                                     message: e,
                                     response
@@ -166,6 +167,7 @@
                             }
                         })
                         .catch(function (error) {
+                            nextUpdateInSec = 30;
                             $this.lastError = error;
                             console.error(error);
                         })
