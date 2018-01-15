@@ -64,7 +64,9 @@
 			methods: {
                 ticktoc(now) {
                     this.now = now;
-                    if (this.isUpdating || now < this.nextUpdate) {
+                    if (!Tools.isUndefinedOrNull(this.nextUpdate) && !Tools.isUndefinedOrNull(now) && now < this.nextUpdate)
+                        return;
+                    if (this.isUpdating) {
                         return;
                     }
                     this.isUpdating = true;
