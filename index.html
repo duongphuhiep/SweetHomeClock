@@ -20,11 +20,11 @@
     <script type="text/x-template" id="updater">
         <div>
             <div>
-				<div v-if="lastSuccessUpdate != null">data updated since {{lastSuccessUpdateStr}}</div>
+				<div v-if="lastSuccessUpdate != null">data updated since {{lastSuccessUpdateSince}} ago</div>
 
 				<div v-if="isUpdating">updating...</div>
 				<div v-else>
-					next update in ({{nextUpdateInSec}} sec)
+					next update in {{nextUpdateInSec}} sec
 				</div>
 				<div v-if="lastError!=null">
                 	{{JSON.stringify(lastError)}}
@@ -47,16 +47,14 @@
                 };
             },
 			computed: {
-                lastSuccessUpdateStr: {
+                lastSuccessUpdateSince: {
                     get() {
-                        return Tools.dateTimeToSinceString(this.lastSuccessUpdate, this.now);
+                        return Tools.dateTimeToDiffString(this.lastSuccessUpdate, this.now);
 					}
 				},
                 nextUpdateInSec: {
                     get() {
-                        if (this.nextUpdate === null || this.now===null)
-                            return "-";
-                        return Math.round((this.nextUpdate.getTime() - this.now.getTime()) / 1000);
+                        return Tools.dateTimeToDiffString(this.now, this.nextUpdate);
 					}
 				}
 			},
@@ -153,7 +151,7 @@
                             nextUpdate.setSeconds(nextUpdate.getSeconds() + nextUpdateInSec);
 
                             $this.nextUpdate = nextUpdate;
-                            console.log(Tools.timeToString(nextUpdate));
+                            //console.log(Tools.timeToString(nextUpdate));
                             $this.isUpdating = false;
                             EventBus.$emit("MISSION_UPDATE", $this);
                         });
@@ -166,10 +164,8 @@
 	<!-- clock start-->
 	<script type="text/x-template" id="clock">
 		<div>
-			<div>
-				{{date}} {{time}}
-			</div>
-
+			<div>{{date}}</div>
+            <div style="align-content: right">{{time}}</div>
 		</div>
 	</script>
 	<script>
@@ -230,7 +226,7 @@
                         && arriveAt.getHours()==h && arriveAt.getMinutes()==mi)
                     {
                         //return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
-                        return Math.floor((arriveAt.getTime() - this.now.getTime()) / 3600);
+                        return Math.floor((arriveAt.getTime() - this.now.getTime()) / 60000);
                     }
 				}
 			},

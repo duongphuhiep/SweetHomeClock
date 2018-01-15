@@ -12,8 +12,7 @@ var Tools = {
     },
 
     dateToString(d) {
-        if (typeof d === "undefined" || d===null)
-            return "-";
+        if (this.isUndefinedOrNull(d)) return '-';
         var month = '' + (d.getMonth() + 1);
         var day = '' + d.getDate();
         var year = d.getFullYear();
@@ -25,8 +24,7 @@ var Tools = {
     },
 
     timeToString(d) {
-        if (typeof d === "undefined" || d===null)
-            return "-";
+        if (this.isUndefinedOrNull(d)) return '-';
         var h = '' + d.getHours();
         var m = '' + d.getMinutes();
         var s = '' + d.getSeconds();
@@ -43,12 +41,15 @@ var Tools = {
     },
 
     //convert date to "10 minute ago"
-    dateTimeToSinceString(d, now) {
-        if (typeof d === "undefined" || d===null)
-            return "-";
-        let sec = Math.floor((now.getTime()-d.getTime())/1000);
+    dateTimeToDiffString(from, to) {
+        if (this.isUndefinedOrNull(from) || this.isUndefinedOrNull(to)) return '-';
+        let sec = Math.floor((to.getTime()-from.getTime())/1000);
         if (sec > 60)
-            return Math.round(sec/60)+" min ago";
-        return sec+" sec ago";
+            return Math.round(sec/60)+" min";
+        return sec+" sec";
+    },
+
+    isUndefinedOrNull(o) {
+        return typeof o === "undefined" || o===null
     }
 };
