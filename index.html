@@ -17,13 +17,12 @@
         <div>
             <div>
 				<div v-if="lastSuccessUpdate != null">data updated since {{lastSuccessUpdateSince}} ago</div>
-
 				<div v-if="isUpdating">updating...</div>
 				<div v-else>
 					next update in {{nextUpdateInSec}}
 				</div>
 				<div v-if="lastError!=null">
-                	{{JSON.stringify(lastError)}}
+                	{{lastError.message}}
 				</div>
             </div>
         </div>
@@ -75,12 +74,28 @@
                             try {
                                 $this.lastError = null;
                                 let data = response.data.return;
+                                $this.lastData = data;
 
-                                //check if response is validate
+                                let hasPerturbation = false;
+                                if (!Tools.isUndefinedOrNull(data.perturbations)) {
+                                    for (let i = 0, max = data.perturbations.length; i < max; i++) {
+                                        let m = data.perturbations[i].message;
+                                        if (!Tools.isUndefinedOrNull(m) && !Tools.isUndefinedOrNull(m.text)) {
+                                            hasPerturbation = true;
+                                            break;
+                                        }
+                                    }
+								}
+								if (hasPerturbation) { //no need to continue anymore
+                                    $this.lastError = null;
+                                    $this.lastSuccessUpdate = now;
+                                    nextUpdateInSec = 30;
+                                    return;
+								}
 
-                                if (Tools.isUndefinedOrNull(data) || Tools.isUndefinedOrNull(data.missions)) {
-                                    nextUpdateInSec = 150; //2.5min
-                                    throw "Invalid response";
+								if (Tools.isUndefinedOrNull(data) || Tools.isUndefinedOrNull(data.missions)) {
+                                    nextUpdateInSec = 30;
+                                    throw "Invalid Response"; //no perturbation & no next mission
                                 }
 
                                 let missions = data.missions;
@@ -149,7 +164,6 @@
                                     //console.log("nearestDateInFuture="+Tools.timeToString(nearestDateInFuture) + " - now=" + Tools.timeToString(now)+" = "+timeToWaitInSecond+"s - nextUpdateInSec="+nextUpdateInSec+"s");
                                 }
                                 $this.lastError = null;
-                                $this.lastData = data;
                                 $this.lastSuccessUpdate = now;
                             }
                             catch (e) {
@@ -263,6 +277,7 @@
 	<!-- missionList start-->
 	<script type="text/x-template" id="missionList">
 		<div>
+			<div v-if="perturbations">{{perturbations}}</div>
 			<table border="1">
 				<tr>Aller</tr>
 				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
@@ -276,14 +291,32 @@
 	<script>
         Vue.component('missionList', {
             template: '#missionList',
+			computed: {
+                missions: {
+                    get() {
+                        if (Tools.isUndefinedOrNull(this.missonsNextResponse) || Tools.isUndefinedOrNull(this.missonsNextResponse.missons))
+                            return null;
+                        return this.missonsNextResponse.missons;
+					}
+				},
+                perturbations: {
+                    get() {
+                        if (Tools.isUndefinedOrNull(this.missonsNextResponse) || Tools.isUndefinedOrNull(this.missonsNextResponse.perturbations))
+                            return null;
+                        let pe = this.missonsNextResponse.perturbations.map(p => p.message.text).filter(s => !Tools.isUndefinedOrNull(s));
+                        if (pe.length==0) return null;
+                        return pe.length>1 ? pe : pe[0];
+                    }
+                }
+			},
             data() {
-                return {missions: null};
+                return {missonsNextResponse: null};
             },
 			mounted() {
                 let $this=this;
                 EventBus.$on("MISSION_UPDATE", (updater)=>{
                     if (updater.lastData!==null)
-                    	$this.missions = updater.lastData.missions;
+                    	$this.missonsNextResponse = updater.lastData;
                 })
 			}
 
