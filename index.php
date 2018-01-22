@@ -281,10 +281,10 @@
 			<div v-if="perturbations">{{perturbations}}</div>
 			<table border="1">
 				<tr>Aller</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
+				<tr is="mission" v-for="m in this.missions" v-if="m.direction.sens=='A' && m.stationsStops=='true'" :m="m"></tr>
 				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='A'" :m="m"></tr>-->
 				<tr>Retour</tr>
-				<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>
+				<tr is="mission" v-for="m in this.missions" v-if="m.direction.sens=='R' && m.stationsStops=='true'" :m="m"></tr>
 				<!--<tr is="mission" v-for="m in missions" v-if="m.direction.sens=='R'" :m="m"></tr>-->
 			</table>
 		</div>
@@ -295,29 +295,29 @@
 			computed: {
                 missions: {
                     get() {
-                        if (Tools.isUndefinedOrNull(this.missonsNextResponse) || Tools.isUndefinedOrNull(this.missonsNextResponse.missons))
+                        if (Tools.isUndefinedOrNull(this.missionsNextResponse) || Tools.isUndefinedOrNull(this.missionsNextResponse.missions))
                             return null;
-                        return this.missonsNextResponse.missons;
+                        return this.missionsNextResponse.missions;
 					}
 				},
                 perturbations: {
                     get() {
-                        if (Tools.isUndefinedOrNull(this.missonsNextResponse) || Tools.isUndefinedOrNull(this.missonsNextResponse.perturbations))
+                        if (Tools.isUndefinedOrNull(this.missionsNextResponse) || Tools.isUndefinedOrNull(this.missionsNextResponse.perturbations))
                             return null;
-                        let pe = this.missonsNextResponse.perturbations.map(p => p.message.text).filter(s => !Tools.isUndefinedOrNull(s));
+                        let pe = this.missionsNextResponse.perturbations.map(p => p.message.text).filter(s => !Tools.isUndefinedOrNull(s));
                         if (pe.length==0) return null;
                         return pe.length>1 ? pe : pe[0];
                     }
                 }
 			},
             data() {
-                return {missonsNextResponse: null};
+                return {missionsNextResponse: 1};
             },
 			mounted() {
-                let $this=this;
                 EventBus.$on("MISSION_UPDATE", (updater)=>{
-                    if (updater.lastData!==null)
-                    	$this.missonsNextResponse = updater.lastData;
+                    if (updater.lastData!==null) {
+                        this.missionsNextResponse = updater.lastData;
+                    }
                 })
 			}
 
@@ -339,9 +339,6 @@
         });
 	</script>
 	<!-- root end -->
-
-
-	<script src="mission_next_sample.js"></script>
 
 	<div id='app'>
 		<root></root>
