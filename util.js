@@ -1,5 +1,7 @@
 var EventBus = new Vue();
-var MAXDATE = new Date(8640000000000000);
+setInterval(()=>EventBus.$emit('SEC', new Date()), 1000);
+const MAXDATE = new Date(8640000000000000);
+
 var Tools = {
     //convert '201807282109' to date
     toDate(s) {
@@ -53,3 +55,4 @@ var Tools = {
         return typeof o === "undefined" || o===null
     }
 };
+
