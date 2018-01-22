@@ -830,3 +830,4 @@ __pycache__/
 # End of https://www.gitignore.io/api/vim,node,jspm,macos,linux,emacs,windows,phpstorm,webstorm,notepadpp,jetbrains,sublimetext,visualstudio,phpcodesniffer,visualstudiocode,vagrant,cakephp,fuelphp,composer,phpstorm+all,phpstorm+iml
 
 lognotif/
+.draft/
