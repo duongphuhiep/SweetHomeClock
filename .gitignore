@@ -831,3 +831,4 @@ __pycache__/
 
 lognotif/
 .draft/
+api/secret.php
