@@ -1,3 +1,4 @@
+<?php require_once 'csrf.php'; ?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -69,7 +70,7 @@
                     let $this = this;
 
                     let nextUpdateInSec = 300; //5min
-                    axios.get('./api/getMissionsNext')
+                    axios.post('./api/getMissionsNext', {token:'<?=$token;?>'})
                         .then(function (response) {
                             try {
                                 $this.lastError = null;
